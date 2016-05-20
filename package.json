@@ -1,0 +1,15 @@
+{
+  "name": "DragAndDropTest",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node node_modules/react-native/local-cli/cli.js start"
+  },
+  "dependencies": {
+    "react": "^15.0.2",
+    "react-motion": "0.3.0",
+    "react-native": "^0.26.0",
+    "react-native-sortable-listview": "0.0.6",
+    "react-timer-mixin": "^0.13.3"
+  }
+}
