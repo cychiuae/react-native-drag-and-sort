@@ -9,6 +9,8 @@ import {
   View,
   Text,
   PanResponder,
+  LayoutAnimation,
+  InteractionManager,
 } from 'react-native';
 
 const deviceWidth = Dimensions.get('window').width;
@@ -33,13 +35,17 @@ const styles = StyleSheet.create({
   },
   itemWrapper: {
     padding: 5,
-    backgroundColor: 'pink',
   },
   text: {
     color: 'white',
   },
   ghost: {
     opacity: 0.3,
+    transform: [
+      {
+        scale: 1.2,
+      },
+    ]
   },
   itemHidden: {
     opacity: 0.0,
@@ -60,17 +66,6 @@ class Item extends Component {
 
   constructor(...args) {
     super(...args);
-  }
-
-  componentDidMount() {
-    this.refs.view.measure((fx, fy, width, height, px, py) => {
-      console.log('Component width is: ' + width)
-      console.log('Component height is: ' + height)
-      console.log('X offset to frame: ' + fx)
-      console.log('Y offset to frame: ' + fy)
-      console.log('X offset to page: ' + px)
-      console.log('Y offset to page: ' + py)
-    });
   }
 
   render() {
@@ -103,26 +98,37 @@ class Friday extends Component {
       const currentItemIndex = Math.floor(
         (this.state.contentOffsetX + evt.nativeEvent.pageX) / (10 + ITEM_WIDTH)
       );
-      console.log('===Yin curr item index', currentItemIndex);
-     // this.state.pan.setOffset(this.currentPanValue);
-      //this.state.pan.setValue(this.currentPanValue);
+      this.state.pan.setOffset(this.currentPanValue);
+      this.state.pan.setValue(this.currentPanValue);
       this.setState({
         currentItemIndex,
       });
       this.timerId = setInterval(this.tick, INTERVAL);
     },
     onPanResponderMove: (evt, gesture) => {
-      console.log('move PageX', evt.nativeEvent.pageX);
       if (this.state.shouldMove) {
-        this.reorder(evt.nativeEvent.pageX);
+        if (Math.abs(gesture.vx) < 1.0) {
+          this.reorder(evt.nativeEvent.pageX);
+        }
         Animated.event([null, {
             dx: this.state.pan.x,
             dy: this.state.pan.y,
         }])(evt, gesture);
+        if ((gesture.moveX < 16 + 10 + ITEM_WIDTH) ) {
+          this.scrollview.scrollTo({
+            x: this.state.contentOffsetX - 60,
+            animated: true,
+          });
+        } else if ((gesture.moveX > deviceWidth - 16 - 10 - ITEM_WIDTH)) {
+          this.scrollview.scrollTo({
+            x: this.state.contentOffsetX + 60,
+            animated: true,
+          });
+        }
       }
     },
     onPanResponderRelease: () => {
-      console.log('termiate');
+      console.log('release');
       this.clearInterval();
       this.setState({
         currentItemIndex: -1,
@@ -132,51 +138,80 @@ class Friday extends Component {
       });
     },
     onPanResponderTerminate: () => {
+      console.log('terminate');
       this.clearInterval();
       this.setState({
         currentItemIndex: -1,
         timer: 0,
         scrollEnabled: true,
         shouldMove: false,
+        currentItemLeftPan: new Animated.Value(0),
+        currentItemRightPan: new Animated.Value(0),
       });
     }
   });
 
   clearInterval = () => {
-    console.log('clear interval');
     clearInterval(this.timerId);
   }
 
   reorder = (pageX) => {
     const currentItemIndex = this.state.currentItemIndex;
     const item = this.state.photos[currentItemIndex];
-    console.log('=========item', item);
-    console.log('===reorder', Math.floor(pageX/(10+ITEM_WIDTH)));
-    console.log('===curr', currentItemIndex);
     const newIndex = Math.floor(
       (this.state.contentOffsetX + pageX) / (10 + ITEM_WIDTH)
     );
-    if (currentItemIndex !== newIndex) {
-      console.log('=== change !!!!!!!!!!!!!!');
+    if (currentItemIndex !== newIndex && !!item) {
       const photosCopy = [
         ...this.state.photos
       ];
       photosCopy.splice(currentItemIndex, 1);
       photosCopy.splice(newIndex, 0, item);
+      console.log('photo copy', photosCopy);
+      if (currentItemIndex > newIndex) {
+        const toValue = 10 + ITEM_WIDTH;
+        Animated.spring(
+          this.state.currentItemLeftPan,
+          {
+            toValue: toValue,
+            tension: 100,
+          }
+        ).start(() => {
+          setTimeout(() =>  {
+            this.setState({
+              photos: photosCopy,
+              currentItemIndex: newIndex,
+              currentItemLeftPan: new Animated.Value(0),
+              currentItemRightPan: new Animated.Value(0),
+            });
+          }, 50);
+        });
+      } else {
+        const toValue = -(10 + ITEM_WIDTH);
+        Animated.spring(
+          this.state.currentItemRightPan,
+          {
+            toValue: toValue,
+            tension: 100,
+          }
+        ).start(() => {
+          setTimeout(() =>  {
+            this.setState({
+              photos: photosCopy,
+              currentItemIndex: newIndex,
+              currentItemLeftPan: new Animated.Value(0),
+              currentItemRightPan: new Animated.Value(0),
+            });
+          }, 50);
+        });
+      }
 
-      this.setState({
-        photos: photosCopy,
-        currentItemIndex: newIndex,
-      });
-      console.log('========= photo copy', photosCopy);
     }
   };
 
   tick = () => {
-    console.log('tick');
     if (this.state.timer > THRESHOLD) {
       this.clearInterval();
-      console.log('long press');
       this.setState({
         shouldMove: true,
         scrollEnabled: false,
@@ -203,6 +238,8 @@ class Friday extends Component {
       currentItemIndex: -1,
       timer: 0,
       shouldMove: false,
+      currentItemLeftPan: new Animated.Value(0),
+      currentItemRightPan: new Animated.Value(0),
     };
   }
 
@@ -215,14 +252,9 @@ class Friday extends Component {
   renderItems() {
     const items = [];
     for (let i = 0; i < this.state.photos.length; i++) {
-      const style = [];
-      style.push(styles.itemWrapper);
-      let panStyle = null;
       if (i === this.state.currentItemIndex && this.state.shouldMove) {
-        panStyle = this.state.pan.getLayout();
         items.push(
           <Animated.View
-            {...this.panResponder.panHandlers}
              >
             <View style={[styles.itemWrapper, styles.itemHidden]}>
               <Item>
@@ -235,12 +267,58 @@ class Friday extends Component {
             </View>
           </Animated.View>
         );
+      } else if (i === this.state.currentItemIndex + 1 &&
+                 this.state.shouldMove) {
+        items.push(
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  translateX: this.state.currentItemRightPan,
+                }
+              ],
+            }}
+             >
+            <View style={styles.itemWrapper}>
+              <Item>
+                <Text style={styles.text}>
+                  {
+                    this.state.photos[i]
+                  }
+                </Text>
+              </Item>
+            </View>
+          </Animated.View>
+        );
+
+      } else if (i === this.state.currentItemIndex - 1 &&
+                 this.state.shouldMove) {
+        items.push(
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  translateX: this.state.currentItemLeftPan,
+                }
+              ],
+            }} >
+            <View style={styles.itemWrapper}>
+              <Item>
+                <Text style={styles.text}>
+                  {
+                    this.state.photos[i]
+                  }
+                </Text>
+              </Item>
+            </View>
+          </Animated.View>
+        );
+
       } else {
         items.push(
           <Animated.View
-            {...this.panResponder.panHandlers}
-            style={panStyle} >
-            <View style={style}>
+             >
+            <View style={styles.itemWrapper}>
               <Item>
                 <Text style={styles.text}>
                   {
@@ -260,7 +338,6 @@ class Friday extends Component {
     if (this.state.currentItemIndex !== -1 && this.state.shouldMove) {
       return (
         <Animated.View
-          {...this.panResponder.panHandlers}
           style={this.state.pan.getLayout()} >
           <View style={[styles.itemWrapper, styles.ghost]}>
             <Item>
@@ -288,6 +365,7 @@ class Friday extends Component {
           alwaysBounceHorizontal={false}
           scrollEnabled={this.state.scrollEnabled}
           onScroll={this.onScroll}
+          {...this.panResponder.panHandlers}
           >
           <View style={{flexDirection: 'row'}}>
             {
