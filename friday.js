@@ -24,6 +24,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     overflow: 'visible',
     marginTop: 20,
+    height: 100,
   },
   item: {
     width: ITEM_WIDTH,
@@ -39,6 +40,9 @@ const styles = StyleSheet.create({
   ghost: {
     opacity: 0.3,
   },
+  itemHidden: {
+    opacity: 0.0,
+  }
 });
 
 const PHOTOS = [
@@ -95,8 +99,8 @@ class Friday extends Component {
         (this.state.contentOffsetX + evt.nativeEvent.pageX) / (10 + ITEM_WIDTH)
       );
       console.log('===Yin curr item index', currentItemIndex);
-      this.state.pan.setOffset(this.currentPanValue);
-      this.state.pan.setValue(this.currentPanValue);
+     // this.state.pan.setOffset(this.currentPanValue);
+      //this.state.pan.setValue(this.currentPanValue);
       this.setState({
         currentItemIndex,
         scrollEnabled: false,
@@ -171,7 +175,7 @@ class Friday extends Component {
           <Animated.View
             {...this.panResponder.panHandlers}
              >
-            <View style={[styles.itemWrapper, styles.ghost]}>
+            <View style={[styles.itemWrapper, styles.itemHidden]}>
               <Item>
                 <Text style={styles.text}>
                   {
@@ -204,12 +208,12 @@ class Friday extends Component {
   }
 
   renderActiveItem() {
-    if (this.state.currentItemIndex !== -1) {
+    if (this.state.currentItemIndex !== -1 && this.state.shouldMove) {
       return (
         <Animated.View
           {...this.panResponder.panHandlers}
           style={this.state.pan.getLayout()} >
-          <View style={styles.itemWrapper}>
+          <View style={[styles.itemWrapper, styles.ghost]}>
             <Item>
               <Text style={styles.text}>
                 {
@@ -235,13 +239,21 @@ class Friday extends Component {
           scrollEnabled={this.state.scrollEnabled}
           onScroll={this.onScroll}
           >
-          {
-            this.renderItems()
-          }
+          <View style={{flexDirection: 'row'}}>
+            {
+              this.renderItems()
+            }
+            <View style={{
+                position: 'absolute',
+                left: this.state.currentItemIndex * (ITEM_WIDTH + 5) + 10,
+              }}>
+               {
+                 this.renderActiveItem()
+               }
+             </View>
+          </View>
         </ScrollView>
-        {
-          this.renderActiveItem()
-        }
+
       </View>
     );
   }
