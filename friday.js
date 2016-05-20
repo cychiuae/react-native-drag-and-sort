@@ -33,6 +33,7 @@ const styles = StyleSheet.create({
   },
   itemWrapper: {
     padding: 5,
+    backgroundColor: 'pink',
   },
   text: {
     color: 'white',
@@ -49,6 +50,10 @@ const PHOTOS = [
   1,
   2,
   3,
+  4,
+  5,
+  6,
+  7,
 ];
 
 class Item extends Component {
@@ -81,7 +86,7 @@ class Item extends Component {
 }
 
 const INTERVAL = 15;
-const THRESHOLD = 200;
+const THRESHOLD = 100;
 
 class Friday extends Component {
 
@@ -92,7 +97,7 @@ class Friday extends Component {
   };
   timerId: null;
   panResponder = PanResponder.create({
-    onMoveShouldSetResponderCapture: () => true,
+    onMoveShouldSetResponderCapture: () => this.state.shouldMove,
     onMoveShouldSetPanResponderCapture: () => true,
     onPanResponderGrant: (evt, gesture) => {
       const currentItemIndex = Math.floor(
@@ -103,35 +108,79 @@ class Friday extends Component {
       //this.state.pan.setValue(this.currentPanValue);
       this.setState({
         currentItemIndex,
-        scrollEnabled: false,
       });
       this.timerId = setInterval(this.tick, INTERVAL);
     },
     onPanResponderMove: (evt, gesture) => {
-      console.log('move');
-      Animated.event([null, {
-          dx: this.state.pan.x,
-          dy: this.state.pan.y,
-      }])(evt, gesture);
+      console.log('move PageX', evt.nativeEvent.pageX);
+      if (this.state.shouldMove) {
+        this.reorder(evt.nativeEvent.pageX);
+        Animated.event([null, {
+            dx: this.state.pan.x,
+            dy: this.state.pan.y,
+        }])(evt, gesture);
+      }
     },
     onPanResponderRelease: () => {
       console.log('termiate');
-      clearInterval(this.timerId);
+      this.clearInterval();
       this.setState({
         currentItemIndex: -1,
         timer: 0,
+        scrollEnabled: true,
+        shouldMove: false,
+      });
+    },
+    onPanResponderTerminate: () => {
+      this.clearInterval();
+      this.setState({
+        currentItemIndex: -1,
+        timer: 0,
+        scrollEnabled: true,
         shouldMove: false,
       });
     }
   });
 
+  clearInterval = () => {
+    console.log('clear interval');
+    clearInterval(this.timerId);
+  }
+
+  reorder = (pageX) => {
+    const currentItemIndex = this.state.currentItemIndex;
+    const item = this.state.photos[currentItemIndex];
+    console.log('=========item', item);
+    console.log('===reorder', Math.floor(pageX/(10+ITEM_WIDTH)));
+    console.log('===curr', currentItemIndex);
+    const newIndex = Math.floor(
+      (this.state.contentOffsetX + pageX) / (10 + ITEM_WIDTH)
+    );
+    if (currentItemIndex !== newIndex) {
+      console.log('=== change !!!!!!!!!!!!!!');
+      const photosCopy = [
+        ...this.state.photos
+      ];
+      photosCopy.splice(currentItemIndex, 1);
+      photosCopy.splice(newIndex, 0, item);
+
+      this.setState({
+        photos: photosCopy,
+        currentItemIndex: newIndex,
+      });
+      console.log('========= photo copy', photosCopy);
+    }
+  };
+
   tick = () => {
     console.log('tick');
     if (this.state.timer > THRESHOLD) {
-      clearInterval(this.timerId);
+      this.clearInterval();
       console.log('long press');
       this.setState({
         shouldMove: true,
+        scrollEnabled: false,
+        activeItemLeft: this.state.currentItemIndex * (ITEM_WIDTH + 10),
       });
     } else {
       const timer = this.state.timer + INTERVAL;
@@ -157,9 +206,9 @@ class Friday extends Component {
     };
   }
 
-  onScroll(evt) {
+  onScroll = (evt) => {
     this.setState({
-      contentOffset: evt.nativeEvent.contentOffset.x,
+      contentOffsetX: evt.nativeEvent.contentOffset.x,
     });
   }
 
@@ -235,6 +284,7 @@ class Friday extends Component {
           ref={(sv) => (this.scrollview = sv)}
           style={styles.scrollview}
           horizontal={true}
+          scrollEventThrottle={50}
           alwaysBounceHorizontal={false}
           scrollEnabled={this.state.scrollEnabled}
           onScroll={this.onScroll}
@@ -245,7 +295,7 @@ class Friday extends Component {
             }
             <View style={{
                 position: 'absolute',
-                left: this.state.currentItemIndex * (ITEM_WIDTH + 5) + 10,
+                left: this.state.activeItemLeft,
               }}>
                {
                  this.renderActiveItem()
