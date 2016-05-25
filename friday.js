@@ -114,17 +114,17 @@ class Friday extends Component {
             dx: this.state.pan.x,
             dy: this.state.pan.y,
         }])(evt, gesture);
-        if ((gesture.moveX < 16 + 10 + ITEM_WIDTH) ) {
-          this.scrollview.scrollTo({
-            x: this.state.contentOffsetX - 60,
-            animated: true,
-          });
-        } else if ((gesture.moveX > deviceWidth - 16 - 10 - ITEM_WIDTH)) {
-          this.scrollview.scrollTo({
-            x: this.state.contentOffsetX + 60,
-            animated: true,
-          });
-        }
+        // if ((gesture.moveX < 16 + 10 + ITEM_WIDTH) ) {
+        //   this.scrollview.scrollTo({
+        //     x: this.state.contentOffsetX - 60,
+        //     animated: true,
+        //   });
+        // } else if ((gesture.moveX > deviceWidth - 16 - 10 - ITEM_WIDTH)) {
+        //   this.scrollview.scrollTo({
+        //     x: this.state.contentOffsetX + 60,
+        //     animated: true,
+        //   });
+        // }
       }
     },
     onPanResponderRelease: () => {
@@ -168,44 +168,10 @@ class Friday extends Component {
       photosCopy.splice(currentItemIndex, 1);
       photosCopy.splice(newIndex, 0, item);
       console.log('photo copy', photosCopy);
-      if (currentItemIndex > newIndex) {
-        const toValue = 10 + ITEM_WIDTH;
-        Animated.spring(
-          this.state.currentItemLeftPan,
-          {
-            toValue: toValue,
-            tension: 100,
-          }
-        ).start(() => {
-          setTimeout(() =>  {
-            this.setState({
-              photos: photosCopy,
-              currentItemIndex: newIndex,
-              currentItemLeftPan: new Animated.Value(0),
-              currentItemRightPan: new Animated.Value(0),
-            });
-          }, 50);
-        });
-      } else {
-        const toValue = -(10 + ITEM_WIDTH);
-        Animated.spring(
-          this.state.currentItemRightPan,
-          {
-            toValue: toValue,
-            tension: 100,
-          }
-        ).start(() => {
-          setTimeout(() =>  {
-            this.setState({
-              photos: photosCopy,
-              currentItemIndex: newIndex,
-              currentItemLeftPan: new Animated.Value(0),
-              currentItemRightPan: new Animated.Value(0),
-            });
-          }, 50);
-        });
-      }
-
+      this.setState({
+        photos: photosCopy,
+        currentItemIndex: newIndex,
+      });
     }
   };
 
