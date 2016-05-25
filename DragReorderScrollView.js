@@ -14,6 +14,7 @@ import {
 
 const deviceWidth = Dimensions.get('window').width;
 const ITEM_WIDTH = deviceWidth / 4 - 16;
+const ITEM_WRAPPER_PADDING = 5;
 
 const styles = StyleSheet.create({
   container: {
@@ -60,6 +61,7 @@ class DragReorderScrollView extends Component {
       shouldMove: false,
       currentItemLeftPan: new Animated.Value(0),
       currentItemRightPan: new Animated.Value(0),
+      itemWrapperPadding: this.props.itemWrapperPadding || ITEM_WRAPPER_PADDING,
     };
   }
 
@@ -69,6 +71,7 @@ class DragReorderScrollView extends Component {
     placeholderItemStyle: PropTypes.object,
     activeItemStyle: PropTypes.object,
     didFinishReorder: PropTypes.func,
+    itemWrapperPadding: PropTypes
   }
 
   scrollview = null;
@@ -82,7 +85,7 @@ class DragReorderScrollView extends Component {
     onMoveShouldSetPanResponderCapture: () => true,
     onPanResponderGrant: (evt, gesture) => {
       const currentItemIndex = Math.floor(
-        (this.state.contentOffsetX + evt.nativeEvent.pageX) / (10 + ITEM_WIDTH)
+        (this.state.contentOffsetX + evt.nativeEvent.pageX) / ((this.state.itemWrapperPadding * 2) + ITEM_WIDTH)
       );
       this.state.pan.setOffset(this.currentPanValue);
       this.state.pan.setValue(this.currentPanValue);
@@ -100,12 +103,12 @@ class DragReorderScrollView extends Component {
             dx: this.state.pan.x,
             dy: this.state.pan.y,
         }])(evt, gesture);
-        // if ((gesture.moveX < 16 + 10 + ITEM_WIDTH) ) {
+        // if ((gesture.moveX < 16 + (this.state.itemWrapperPadding * 2) + ITEM_WIDTH) ) {
         //   this.scrollview.scrollTo({
         //     x: this.state.contentOffsetX - 60,
         //     animated: true,
         //   });
-        // } else if ((gesture.moveX > deviceWidth - 16 - 10 - ITEM_WIDTH)) {
+        // } else if ((gesture.moveX > deviceWidth - 16 - (this.state.itemWrapperPadding * 2) - ITEM_WIDTH)) {
         //   this.scrollview.scrollTo({
         //     x: this.state.contentOffsetX + 60,
         //     animated: true,
@@ -135,7 +138,7 @@ class DragReorderScrollView extends Component {
     const currentItemIndex = this.state.currentItemIndex;
     const item = this.state.items[currentItemIndex];
     const newIndex = Math.floor(
-      (this.state.contentOffsetX + pageX) / (10 + ITEM_WIDTH)
+      (this.state.contentOffsetX + pageX) / ((this.state.itemWrapperPadding * 2) + ITEM_WIDTH)
     );
     if (currentItemIndex !== newIndex && !!item) {
       const itemsCopy = [
@@ -162,7 +165,7 @@ class DragReorderScrollView extends Component {
       this.setState({
         shouldMove: true,
         scrollEnabled: false,
-        activeItemLeft: this.state.currentItemIndex * (ITEM_WIDTH + 10),
+        activeItemLeft: this.state.currentItemIndex * (ITEM_WIDTH + (this.state.itemWrapperPadding * 2)),
       });
     } else {
       const timer = this.state.timer + INTERVAL;
@@ -187,7 +190,11 @@ class DragReorderScrollView extends Component {
         <Animated.View
           style={animationRelatedStyle}
           >
-          {this.props.renderItem(i, item)}
+          <View style={{
+            padding: this.state.itemWrapperPadding,
+          }}>
+            {this.props.renderItem(i, item)}
+          </View>
         </Animated.View>
       );
     }
@@ -207,7 +214,11 @@ class DragReorderScrollView extends Component {
             this.state.pan.getLayout(),
             this.props.activeItemStyle || styles.ghost,
             ]} >
-          {this.props.renderItem(currentItemIndex, items[currentItemIndex])}
+          <View style={{
+            padding: this.state.itemWrapperPadding,
+          }}>
+            {this.props.renderItem(currentItemIndex, items[currentItemIndex])}
+          </View>
         </Animated.View>
       );
     }

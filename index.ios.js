@@ -354,19 +354,18 @@ class DummyProject extends Component {
       <DragReorderScrollView
         items={PHOTOS}
         renderItem={this.renderItem}
-        didFinishReorder={this.didFinishReorder} />
+        didFinishReorder={this.didFinishReorder}
+        />
     );
   }
 
   renderItem(index, item) {
     return (
-      <View style={{padding: 5,}}>
-        <Item>
-          <Text style={{color: 'white'}}>
-            {item}
-          </Text>
-        </Item>
-      </View>
+      <Item>
+        <Text style={{color: 'white'}}>
+          {item}
+        </Text>
+      </Item>
     );
   }
 
