@@ -9,8 +9,6 @@ import {
   View,
   Text,
   PanResponder,
-  LayoutAnimation,
-  InteractionManager,
 } from 'react-native';
 
 const deviceWidth = Dimensions.get('window').width;
@@ -83,7 +81,7 @@ class Item extends Component {
 const INTERVAL = 15;
 const THRESHOLD = 100;
 
-class Friday extends Component {
+class DragReorderScrollView extends Component {
 
   scrollview = null;
   currentPanValue = {
@@ -354,5 +352,5 @@ class Friday extends Component {
 
 }
 
-module.exports = Friday;
+module.exports = DragReorderScrollView;
 

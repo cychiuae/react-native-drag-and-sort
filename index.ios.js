@@ -314,5 +314,5 @@ const styles = StyleSheet.create({
 const MyComponent = require('./example');
 const SortableScrollView = require('./example2');
 // const App = require('./example3');
-const Friday = require('./friday.js');
-AppRegistry.registerComponent('DragAndDropTest', () => Friday);
+const DragReorderScrollView = require('./DragReorderScrollView.js');
+AppRegistry.registerComponent('DragAndDropTest', () => DragReorderScrollView);
