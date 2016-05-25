@@ -313,6 +313,23 @@ const styles = StyleSheet.create({
 
 const MyComponent = require('./example');
 const SortableScrollView = require('./example2');
-// const App = require('./example3');
-const DragReorderScrollView = require('./DragReorderScrollView.js');
-AppRegistry.registerComponent('DragAndDropTest', () => DragReorderScrollView);
+
+const PHOTOS = [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+];
+const DragReorderScrollView = require('./components/DragReorderScrollView.js');
+class DummyProject extends Component {
+  render() {
+    return (
+      <DragReorderScrollView
+        items={PHOTOS} />
+    );
+  }
+}
+AppRegistry.registerComponent('DragAndDropTest', () => DummyProject);

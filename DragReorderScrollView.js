@@ -9,6 +9,7 @@ import {
   View,
   Text,
   PanResponder,
+  PropTypes,
 } from 'react-native';
 
 const deviceWidth = Dimensions.get('window').width;
@@ -50,16 +51,6 @@ const styles = StyleSheet.create({
   }
 });
 
-const PHOTOS = [
-  1,
-  2,
-  3,
-  4,
-  5,
-  6,
-  7,
-];
-
 class Item extends Component {
 
   constructor(...args) {
@@ -82,6 +73,28 @@ const INTERVAL = 15;
 const THRESHOLD = 100;
 
 class DragReorderScrollView extends Component {
+
+  constructor(...args) {
+    super(...args);
+
+    this.state = {
+      items: [
+        ...this.props.items,
+      ],
+      pan: new Animated.ValueXY(),
+      scrollEnabled: true,
+      contentOffsetX: 0,
+      currentItemIndex: -1,
+      timer: 0,
+      shouldMove: false,
+      currentItemLeftPan: new Animated.Value(0),
+      currentItemRightPan: new Animated.Value(0),
+    };
+  }
+
+  propTypes = {
+    items: PropTypes.array.isRequired,
+  }
 
   scrollview = null;
   currentPanValue = {
@@ -155,19 +168,19 @@ class DragReorderScrollView extends Component {
 
   reorder = (pageX) => {
     const currentItemIndex = this.state.currentItemIndex;
-    const item = this.state.photos[currentItemIndex];
+    const item = this.state.items[currentItemIndex];
     const newIndex = Math.floor(
       (this.state.contentOffsetX + pageX) / (10 + ITEM_WIDTH)
     );
     if (currentItemIndex !== newIndex && !!item) {
-      const photosCopy = [
-        ...this.state.photos
+      const itemsCopy = [
+        ...this.state.items
       ];
-      photosCopy.splice(currentItemIndex, 1);
-      photosCopy.splice(newIndex, 0, item);
-      console.log('photo copy', photosCopy);
+      itemsCopy.splice(currentItemIndex, 1);
+      itemsCopy.splice(newIndex, 0, item);
+      console.log('photo copy', itemsCopy);
       this.setState({
-        photos: photosCopy,
+        items: itemsCopy,
         currentItemIndex: newIndex,
       });
     }
@@ -189,24 +202,6 @@ class DragReorderScrollView extends Component {
     }
   };
 
-  constructor(...args) {
-    super(...args);
-
-    this.state = {
-      photos: [
-        ...PHOTOS,
-      ],
-      pan: new Animated.ValueXY(),
-      scrollEnabled: true,
-      contentOffsetX: 0,
-      currentItemIndex: -1,
-      timer: 0,
-      shouldMove: false,
-      currentItemLeftPan: new Animated.Value(0),
-      currentItemRightPan: new Animated.Value(0),
-    };
-  }
-
   onScroll = (evt) => {
     this.setState({
       contentOffsetX: evt.nativeEvent.contentOffset.x,
@@ -215,7 +210,7 @@ class DragReorderScrollView extends Component {
 
   renderItems() {
     const items = [];
-    for (let i = 0; i < this.state.photos.length; i++) {
+    for (let i = 0; i < this.state.items.length; i++) {
       if (i === this.state.currentItemIndex && this.state.shouldMove) {
         items.push(
           <Animated.View
@@ -224,7 +219,7 @@ class DragReorderScrollView extends Component {
               <Item>
                 <Text style={styles.text}>
                   {
-                    this.state.photos[i]
+                    this.state.items[i]
                   }
                 </Text>
               </Item>
@@ -247,7 +242,7 @@ class DragReorderScrollView extends Component {
               <Item>
                 <Text style={styles.text}>
                   {
-                    this.state.photos[i]
+                    this.state.items[i]
                   }
                 </Text>
               </Item>
@@ -270,7 +265,7 @@ class DragReorderScrollView extends Component {
               <Item>
                 <Text style={styles.text}>
                   {
-                    this.state.photos[i]
+                    this.state.items[i]
                   }
                 </Text>
               </Item>
@@ -286,7 +281,7 @@ class DragReorderScrollView extends Component {
               <Item>
                 <Text style={styles.text}>
                   {
-                    this.state.photos[i]
+                    this.state.items[i]
                   }
                 </Text>
               </Item>
@@ -307,7 +302,7 @@ class DragReorderScrollView extends Component {
             <Item>
               <Text style={styles.text}>
                 {
-                  this.state.photos[this.state.currentItemIndex]
+                  this.state.items[this.state.currentItemIndex]
                 }
               </Text>
             </Item>
