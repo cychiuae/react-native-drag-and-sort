@@ -27,17 +27,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     height: 100,
   },
-  item: {
-    width: ITEM_WIDTH,
-    height: ITEM_WIDTH,
-    backgroundColor: '#123456',
-  },
-  itemWrapper: {
-    padding: 5,
-  },
-  text: {
-    color: 'white',
-  },
   ghost: {
     opacity: 0.3,
     transform: [
@@ -50,24 +39,6 @@ const styles = StyleSheet.create({
     opacity: 0.0,
   }
 });
-
-class Item extends Component {
-
-  constructor(...args) {
-    super(...args);
-  }
-
-  render() {
-    return (
-      <View ref="view" style={styles.item}>
-        {
-          this.props.children
-        }
-      </View>
-    );
-  }
-
-}
 
 const INTERVAL = 15;
 const THRESHOLD = 100;
@@ -94,6 +65,9 @@ class DragReorderScrollView extends Component {
 
   propTypes = {
     items: PropTypes.array.isRequired,
+    renderItem: PropTypes.func.isRequired,
+    placeholderItemStyle: PropTypes.object,
+    activeItemStyle: PropTypes.object,
   }
 
   scrollview = null;
@@ -211,102 +185,33 @@ class DragReorderScrollView extends Component {
   renderItems() {
     const items = [];
     for (let i = 0; i < this.state.items.length; i++) {
-      if (i === this.state.currentItemIndex && this.state.shouldMove) {
-        items.push(
-          <Animated.View
-             >
-            <View style={[styles.itemWrapper, styles.itemHidden]}>
-              <Item>
-                <Text style={styles.text}>
-                  {
-                    this.state.items[i]
-                  }
-                </Text>
-              </Item>
-            </View>
-          </Animated.View>
-        );
-      } else if (i === this.state.currentItemIndex + 1 &&
-                 this.state.shouldMove) {
-        items.push(
-          <Animated.View
-            style={{
-              transform: [
-                {
-                  translateX: this.state.currentItemRightPan,
-                }
-              ],
-            }}
-             >
-            <View style={styles.itemWrapper}>
-              <Item>
-                <Text style={styles.text}>
-                  {
-                    this.state.items[i]
-                  }
-                </Text>
-              </Item>
-            </View>
-          </Animated.View>
-        );
-
-      } else if (i === this.state.currentItemIndex - 1 &&
-                 this.state.shouldMove) {
-        items.push(
-          <Animated.View
-            style={{
-              transform: [
-                {
-                  translateX: this.state.currentItemLeftPan,
-                }
-              ],
-            }} >
-            <View style={styles.itemWrapper}>
-              <Item>
-                <Text style={styles.text}>
-                  {
-                    this.state.items[i]
-                  }
-                </Text>
-              </Item>
-            </View>
-          </Animated.View>
-        );
-
-      } else {
-        items.push(
-          <Animated.View
-             >
-            <View style={styles.itemWrapper}>
-              <Item>
-                <Text style={styles.text}>
-                  {
-                    this.state.items[i]
-                  }
-                </Text>
-              </Item>
-            </View>
-          </Animated.View>
-        );
-      }
+      const animationRelatedStyle = this._getAnimationRelatedStyle(i);
+      const item = this.state.items[i];
+      items.push(
+        <Animated.View
+          style={animationRelatedStyle}
+          >
+          {this.props.renderItem(i, item)}
+        </Animated.View>
+      );
     }
     return items;
   }
 
   renderActiveItem() {
-    if (this.state.currentItemIndex !== -1 && this.state.shouldMove) {
+    const {
+      currentItemIndex,
+      shouldMove,
+      items,
+    } = this.state;
+    if (currentItemIndex !== -1 && shouldMove) {
       return (
         <Animated.View
-          style={this.state.pan.getLayout()} >
-          <View style={[styles.itemWrapper, styles.ghost]}>
-            <Item>
-              <Text style={styles.text}>
-                {
-                  this.state.items[this.state.currentItemIndex]
-                }
-              </Text>
-            </Item>
-          </View>
+          style={[
+            this.state.pan.getLayout(),
+            this.props.activeItemStyle || styles.ghost,
+            ]} >
+          {this.props.renderItem(currentItemIndex, items[currentItemIndex])}
         </Animated.View>
       );
     }
@@ -343,6 +248,34 @@ class DragReorderScrollView extends Component {
 
       </View>
     );
+  }
+
+  _getAnimationRelatedStyle(indexOfItemRendering) {
+    const {
+      currentItemIndex,
+      shouldMove,
+    } = this.state;
+    let animationRelatedStyle = {};
+    if (indexOfItemRendering === currentItemIndex && shouldMove) {
+      animationRelatedStyle = this.props.placeholderItemStyle || styles.itemHidden;
+    } else if (indexOfItemRendering === currentItemIndex + 1 && shouldMove) {
+      animationRelatedStyle = {
+        transform: [
+          {
+            translateX: this.state.currentItemRightPan,
+          }
+        ],
+      };
+    } else if (indexOfItemRendering === currentItemIndex - 1 && shouldMove) {
+      animationRelatedStyle = {
+        transform: [
+          {
+            translateX: this.state.currentItemLeftPan,
+          }
+        ],
+      };
+    }
+    return animationRelatedStyle;
   }
 
 }
