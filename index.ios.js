@@ -313,6 +313,60 @@ const styles = StyleSheet.create({
 
 const MyComponent = require('./example');
 const SortableScrollView = require('./example2');
-// const App = require('./example3');
-const Friday = require('./friday.js');
-AppRegistry.registerComponent('DragAndDropTest', () => Friday);
+
+const ITEM_WIDTH = deviceWidth / 4 - 16;
+
+class Item extends Component {
+
+  constructor(...args) {
+    super(...args);
+  }
+
+  render() {
+    return (
+      <View ref="view" style={{
+        width: ITEM_WIDTH,
+        height: ITEM_WIDTH,
+        backgroundColor: '#123456',
+      }}>
+        {
+          this.props.children
+        }
+      </View>
+    );
+  }
+
+}
+
+const PHOTOS = [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+];
+const DragReorderScrollView = require('./DragReorderScrollView.js');
+class DummyProject extends Component {
+  render() {
+    return (
+      <DragReorderScrollView
+        items={PHOTOS}
+        renderItem={this.renderItem} />
+    );
+  }
+
+  renderItem(index, item) {
+    return (
+      <View style={{padding: 5,}}>
+        <Item>
+          <Text style={{color: 'white'}}>
+            {item}
+          </Text>
+        </Item>
+      </View>
+    );
+  }
+}
+AppRegistry.registerComponent('DragAndDropTest', () => DummyProject);
