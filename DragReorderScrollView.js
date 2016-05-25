@@ -68,6 +68,7 @@ class DragReorderScrollView extends Component {
     renderItem: PropTypes.func.isRequired,
     placeholderItemStyle: PropTypes.object,
     activeItemStyle: PropTypes.object,
+    didFinishReorder: PropTypes.func,
   }
 
   scrollview = null;
@@ -120,20 +121,10 @@ class DragReorderScrollView extends Component {
         timer: 0,
         scrollEnabled: true,
         shouldMove: false,
-      });
-    },
-    onPanResponderTerminate: () => {
-      console.log('terminate');
-      this.clearInterval();
-      this.setState({
-        currentItemIndex: -1,
-        timer: 0,
-        scrollEnabled: true,
-        shouldMove: false,
         currentItemLeftPan: new Animated.Value(0),
         currentItemRightPan: new Animated.Value(0),
-      });
-    }
+      }, this._didFinishReorder);
+    },
   });
 
   clearInterval = () => {
@@ -158,6 +149,11 @@ class DragReorderScrollView extends Component {
         currentItemIndex: newIndex,
       });
     }
+  };
+
+  _didFinishReorder = () => {
+    this.props.didFinishReorder &&
+    this.props.didFinishReorder(this.state.items);
   };
 
   tick = () => {

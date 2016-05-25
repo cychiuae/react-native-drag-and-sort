@@ -353,7 +353,8 @@ class DummyProject extends Component {
     return (
       <DragReorderScrollView
         items={PHOTOS}
-        renderItem={this.renderItem} />
+        renderItem={this.renderItem}
+        didFinishReorder={this.didFinishReorder} />
     );
   }
 
@@ -367,6 +368,10 @@ class DummyProject extends Component {
         </Item>
       </View>
     );
+  }
+
+  didFinishReorder(items) {
+    console.log('###didFinishReorder items: ', items);
   }
 }
 AppRegistry.registerComponent('DragAndDropTest', () => DummyProject);
