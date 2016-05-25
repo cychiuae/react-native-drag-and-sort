@@ -347,7 +347,7 @@ const PHOTOS = [
   6,
   7,
 ];
-const DragReorderScrollView = require('./components/DragReorderScrollView.js');
+const DragReorderScrollView = require('./DragReorderScrollView.js');
 class DummyProject extends Component {
   render() {
     return (

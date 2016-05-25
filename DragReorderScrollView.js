@@ -1,5 +1,6 @@
 import React, {
   Component,
+  PropTypes,
 } from 'react';
 import {
   Animated,
@@ -9,7 +10,6 @@ import {
   View,
   Text,
   PanResponder,
-  PropTypes,
 } from 'react-native';
 
 const deviceWidth = Dimensions.get('window').width;
