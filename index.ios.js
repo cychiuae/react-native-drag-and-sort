@@ -349,10 +349,17 @@ const PHOTOS = [
 ];
 const DragReorderScrollView = require('./DragReorderScrollView.js');
 class DummyProject extends Component {
+
+  state = {
+    items: [
+      ...PHOTOS
+    ],
+  };
+
   render() {
     return (
       <DragReorderScrollView
-        items={PHOTOS}
+        items={this.state.items}
         renderItem={this.renderItem}
         didFinishReorder={this.didFinishReorder}
         />
@@ -369,8 +376,10 @@ class DummyProject extends Component {
     );
   }
 
-  didFinishReorder(items) {
-    console.log('###didFinishReorder items: ', items);
-  }
+  didFinishReorder = (items) => {
+    this.setState({
+      items,
+    });
+  };
 }
 AppRegistry.registerComponent('DragAndDropTest', () => DummyProject);

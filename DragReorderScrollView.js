@@ -74,6 +74,17 @@ class DragReorderScrollView extends Component {
     itemWrapperPadding: PropTypes
   }
 
+  componentWillReceiveProps = (nextProps) => {
+    if (!!nextProps.items) {
+      this.setState({
+        items: [
+          ...nextProps.items,
+        ],
+        itemWrapperPadding: nextProps.itemWrapperPadding || ITEM_WRAPPER_PADDING,
+      });
+    }
+  };
+
   scrollview = null;
   currentPanValue = {
     x: 0,
