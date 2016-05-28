@@ -10,7 +10,10 @@ import {
   View,
   Text,
   PanResponder,
+  LayoutAnimation,
+  TouchableOpacity,
 } from 'react-native';
+const _ = require('lodash');
 
 const deviceWidth = Dimensions.get('window').width;
 const ITEM_WIDTH = deviceWidth / 4 - 16;
@@ -23,6 +26,7 @@ const styles = StyleSheet.create({
     padding: 16
   },
   scrollview: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     overflow: 'visible',
     marginTop: 20,
@@ -44,199 +48,195 @@ const styles = StyleSheet.create({
 const INTERVAL = 15;
 const THRESHOLD = 100;
 
+class DraggableView extends Component {
+
+  constructor(...args) {
+    super(...args);
+    this.state = {
+      pan: new Animated.ValueXY(),
+      pop: new Animated.Value(0),
+    };
+  }
+
+  _onLongPress = () => {
+    const config = {
+      tension: 40,
+      friction: 3,
+    };
+    this.state.pan.addListener((value) => {
+      this.props.onMove && this.props.onMove(value);
+    });
+    Animated.spring(this.state.pop, {
+      toValue: 1,
+      ...config,
+    }).start();
+    this.setState({
+      panResponder: PanResponder.create({
+        onPanResponderMove: (e, g) => {
+          Animated.event([
+          null,
+          {
+            dx: this.state.pan.x,
+            dy: this.state.pan.y,
+          }
+        ])(e, g)},
+        onPanResponderRelease: (e, gestureState) => {
+          LayoutAnimation.easeInEaseOut();
+          Animated.spring(this.state.pop, {
+            toValue: 0,
+            ...config,
+          }).start();
+          this.setState({
+            panResponder: undefined,
+          });
+          this.props.onMove && this.props.onMove({
+            x: gestureState.dx + this.props.restLayout.x,
+            y: gestureState.dy + this.props.restLayout.y,
+          });
+          this.props.onDeactivate && this.props.onDeactivate();
+        },
+      }),
+    }, () => {
+      this.props.onActivate && this.props.onActivate();
+    });
+  };
+
+  render = () => {
+    let handlers;
+    let dragStyle;
+    if (!!this.state.panResponder) {
+      handlers = this.state.panResponder.panHandlers;
+      dragStyle = {
+        position: 'absolute',
+        ...this.state.pan.getLayout(),
+      };
+    } else {
+      handlers = {
+        onStartShouldSetResponder: () => true,
+        onResponderGrant: () => {
+          this.state.pan.setValue({x: 0, y: 0});           // reset                (step1: uncomment)
+          this.state.pan.setOffset(this.props.restLayout); // offset from onLayout (step1: uncomment)
+          this.longTimer = setTimeout(this._onLongPress, 300);
+        },
+        onResponderRelease: () => {
+          if (!this.state.panResponder) {
+            clearTimeout(this.longTimer);
+          }
+        }
+      };
+    }
+    const animatedStyle = {
+      transform: [
+        {
+          scale: this.state.pop.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1.3],
+          }),
+        }
+      ],
+    };
+    if (this.props.dummy) {
+      animatedStyle.opacity = 0.2;
+    }
+    return (
+      <Animated.View
+        onLayout={this.props.onLayout}
+        style={[
+          {
+            shadowRadius: 10,
+            shadowColor: 'rgba(0,0,0,0.7)',
+            shadowOffset: {height: 8},
+            alignSelf: 'flex-start',
+            backgroundColor: 'red',
+            margin: 10,
+          },
+          dragStyle,
+          animatedStyle,
+        ]}
+        {...handlers}
+        >
+        <View
+          style={{
+            width: ITEM_WIDTH,
+            height: ITEM_WIDTH,
+          }}>
+          <Text>
+            { this.props.item }
+          </Text>
+        </View>
+      </Animated.View>
+    );
+  };
+
+}
+
 class DragReorderScrollView extends Component {
 
   constructor(...args) {
     super(...args);
-
+    const itemsMap = [...this.props.items];
     this.state = {
-      items: [
-        ...this.props.items,
-      ],
-      pan: new Animated.ValueXY(),
-      scrollEnabled: true,
-      contentOffsetX: 0,
-      currentItemIndex: -1,
-      timer: 0,
-      shouldMove: false,
-      currentItemLeftPan: new Animated.Value(0),
-      currentItemRightPan: new Animated.Value(0),
-      itemWrapperPadding: this.props.itemWrapperPadding || ITEM_WRAPPER_PADDING,
+      scrollEnabled: false,
+      itemsMap,
+      restLayouts: [],
+      openVal: new Animated.Value(0),
     };
   }
 
-  propTypes = {
-    items: PropTypes.array.isRequired,
-    renderItem: PropTypes.func.isRequired,
-    placeholderItemStyle: PropTypes.object,
-    activeItemStyle: PropTypes.object,
-    didFinishReorder: PropTypes.func,
-    itemWrapperPadding: PropTypes
+  onScroll = () => {
+
   }
 
-  componentWillReceiveProps = (nextProps) => {
-    if (!!nextProps.items) {
-      this.setState({
-        items: [
-          ...nextProps.items,
-        ],
-        itemWrapperPadding: nextProps.itemWrapperPadding || ITEM_WRAPPER_PADDING,
-      });
-    }
-  };
-
-  scrollview = null;
-  currentPanValue = {
-    x: 0,
-    y: 0,
-  };
-  timerId: null;
-  panResponder = PanResponder.create({
-    onMoveShouldSetResponderCapture: () => this.state.shouldMove,
-    onMoveShouldSetPanResponderCapture: () => true,
-    onPanResponderGrant: (evt, gesture) => {
-      const currentItemIndex = Math.floor(
-        (this.state.contentOffsetX + evt.nativeEvent.pageX) / ((this.state.itemWrapperPadding * 2) + ITEM_WIDTH)
-      );
-      this.state.pan.setOffset(this.currentPanValue);
-      this.state.pan.setValue(this.currentPanValue);
-      this.setState({
-        currentItemIndex,
-      });
-      this.timerId = setInterval(this.tick, INTERVAL);
-    },
-    onPanResponderMove: (evt, gesture) => {
-      if (this.state.shouldMove) {
-        if (Math.abs(gesture.vx) < 1.0) {
-          this.reorder(evt.nativeEvent.pageX);
+  render = () => {
+    const items = this.state.itemsMap.map((item, key) => {
+      if (item === this.state.activeItem) {
+        return (
+          <DraggableView
+            key={item+'d'}
+            dummy
+            />
+        );
+      } else {
+        let onLayout;
+        if (!this.state.restLayouts[key]) {
+          onLayout = (e) => {
+            const layout = e.nativeEvent.layout;
+            this.setState((state) => {
+              state.restLayouts[key] = layout;
+              return state;
+            });
+          };
         }
-        Animated.event([null, {
-            dx: this.state.pan.x,
-            dy: this.state.pan.y,
-        }])(evt, gesture);
-        // if ((gesture.moveX < 16 + (this.state.itemWrapperPadding * 2) + ITEM_WIDTH) ) {
-        //   this.scrollview.scrollTo({
-        //     x: this.state.contentOffsetX - 60,
-        //     animated: true,
-        //   });
-        // } else if ((gesture.moveX > deviceWidth - 16 - (this.state.itemWrapperPadding * 2) - ITEM_WIDTH)) {
-        //   this.scrollview.scrollTo({
-        //     x: this.state.contentOffsetX + 60,
-        //     animated: true,
-        //   });
-        // }
+        return (
+          <DraggableView
+            key={item}
+            item={item}
+            onLayout={onLayout}
+            restLayout={this.state.restLayouts[key]}
+            onActivate={() => {
+              this.setState({
+                activeKey: key,
+                activeItem: item,
+                activeInitialLayout: this.state.restLayouts[key]
+              })
+            }}
+            />
+        );
       }
-    },
-    onPanResponderRelease: () => {
-      console.log('release');
-      this.clearInterval();
-      this.setState({
-        currentItemIndex: -1,
-        timer: 0,
-        scrollEnabled: true,
-        shouldMove: false,
-        currentItemLeftPan: new Animated.Value(0),
-        currentItemRightPan: new Animated.Value(0),
-      }, this._didFinishReorder);
-    },
-  });
-
-  clearInterval = () => {
-    clearInterval(this.timerId);
-  }
-
-  reorder = (pageX) => {
-    const currentItemIndex = this.state.currentItemIndex;
-    const item = this.state.items[currentItemIndex];
-    const newIndex = Math.floor(
-      (this.state.contentOffsetX + pageX) / ((this.state.itemWrapperPadding * 2) + ITEM_WIDTH)
-    );
-    if (currentItemIndex !== newIndex && !!item) {
-      const itemsCopy = [
-        ...this.state.items
-      ];
-      itemsCopy.splice(currentItemIndex, 1);
-      itemsCopy.splice(newIndex, 0, item);
-      console.log('photo copy', itemsCopy);
-      this.setState({
-        items: itemsCopy,
-        currentItemIndex: newIndex,
-      });
-    }
-  };
-
-  _didFinishReorder = () => {
-    this.props.didFinishReorder &&
-    this.props.didFinishReorder(this.state.items);
-  };
-
-  tick = () => {
-    if (this.state.timer > THRESHOLD) {
-      this.clearInterval();
-      this.setState({
-        shouldMove: true,
-        scrollEnabled: false,
-        activeItemLeft: this.state.currentItemIndex * (ITEM_WIDTH + (this.state.itemWrapperPadding * 2)),
-      });
-    } else {
-      const timer = this.state.timer + INTERVAL;
-      this.setState({
-        timer,
-      });
-    }
-  };
-
-  onScroll = (evt) => {
-    this.setState({
-      contentOffsetX: evt.nativeEvent.contentOffset.x,
     });
-  }
 
-  renderItems() {
-    const items = [];
-    for (let i = 0; i < this.state.items.length; i++) {
-      const animationRelatedStyle = this._getAnimationRelatedStyle(i);
-      const item = this.state.items[i];
+    if (!!this.state.activeItem) {
       items.push(
-        <Animated.View
-          style={animationRelatedStyle}
-          >
-          <View style={{
-            padding: this.state.itemWrapperPadding,
-          }}>
-            {this.props.renderItem(i, item)}
-          </View>
-        </Animated.View>
+         <DraggableView
+           key={this.state.activeItem}
+           item={this.state.activeItem}
+           restLayout={this.state.activeInitialLayout}
+           onMove={this._onMove}
+           onDeactivate={() => { this.setState({activeKey: null, activeItem:null}); }}
+         />
       );
     }
-    return items;
-  }
 
-  renderActiveItem() {
-    const {
-      currentItemIndex,
-      shouldMove,
-      items,
-    } = this.state;
-    if (currentItemIndex !== -1 && shouldMove) {
-      return (
-        <Animated.View
-          style={[
-            this.state.pan.getLayout(),
-            this.props.activeItemStyle || styles.ghost,
-            ]} >
-          <View style={{
-            padding: this.state.itemWrapperPadding,
-          }}>
-            {this.props.renderItem(currentItemIndex, items[currentItemIndex])}
-          </View>
-        </Animated.View>
-      );
-    }
-    return null;
-  }
-
-  render() {
     return (
       <View style={styles.container}>
         <ScrollView
@@ -245,27 +245,59 @@ class DragReorderScrollView extends Component {
           horizontal={true}
           scrollEventThrottle={50}
           alwaysBounceHorizontal={false}
-          scrollEnabled={this.state.scrollEnabled}
+          scrollEnabled={false}
           onScroll={this.onScroll}
-          {...this.panResponder.panHandlers}
           >
-          <View style={{flexDirection: 'row'}}>
-            {
-              this.renderItems()
-            }
-            <View style={{
-                position: 'absolute',
-                left: this.state.activeItemLeft,
-              }}>
-               {
-                 this.renderActiveItem()
-               }
-             </View>
-          </View>
+          {
+            items
+          }
         </ScrollView>
-
       </View>
     );
+  }
+
+  _onMove = (position) => {
+    const newItems = this.moveToClosest(position);
+    if (!_.isEqual(newItems, this.state.itemsMap)) {
+      LayoutAnimation.easeInEaseOut();  // animates layout update as one batch (step3: uncomment)
+      console.log({
+        newItems,
+        old: this.state.itemsMap,
+      })
+      this.setState({itemsMap: newItems});
+    }
+  }
+
+  moveToClosest = (position) => {
+    let activeItem = null;
+    let closestItem = null;
+    let closestIndex = -1;
+    let minDist = Infinity;
+    const newItems = [];
+    this.state.itemsMap.forEach((item, key) => {
+      const dist = this.distance(position, this.state.restLayouts[key]);
+
+      if (item !== this.state.activeItem) {
+        newItems.push(item);
+      }
+
+      if (dist < minDist) {
+        minDist = dist;
+        closestItem = item;
+        closestIndex = key;
+      }
+    });
+    if (closestItem === activeItem) {
+      return this.state.itemsMap;
+    }
+    newItems.splice(closestIndex, 0, this.state.activeItem);
+    return newItems;
+  }
+
+  distance = (p1, p2) => {
+    const dx = p1.x - p2.x;
+    const dy = p1.y - p2.y;
+    return dx * dx + dy * dy;
   }
 
   _getAnimationRelatedStyle(indexOfItemRendering) {
@@ -295,7 +327,6 @@ class DragReorderScrollView extends Component {
     }
     return animationRelatedStyle;
   }
-
 }
 
 module.exports = DragReorderScrollView;
